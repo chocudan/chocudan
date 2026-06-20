@@ -1,0 +1,49 @@
+name: food_finder
+description: "App tổng hợp quán ăn và địa điểm vui chơi quanh Vinhomes Q9"
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # Database (local, SQLite via drift)
+  drift: ^2.16.0
+  sqlite3_flutter_libs: ^0.5.18
+  path_provider: ^2.1.2
+  path: ^1.9.0
+  # Web support: drift dùng sqlite3 compiled sang WASM trên trình duyệt
+  sqlite3: ^2.4.6
+  drift_flutter: ^0.2.0
+
+  # UUID for primary keys (sync-friendly)
+  uuid: ^4.3.3
+  crypto: ^3.0.3
+
+  # Open phone/zalo links
+  url_launcher: ^6.2.5
+
+  # Pick images from gallery/camera
+  image_picker: ^1.0.7
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # HTTP calls to Claude API for AI parsing
+  http: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+  # Code generation for drift
+  drift_dev: ^2.16.0
+  build_runner: ^2.4.8
+
+flutter:
+  uses-material-design: true
