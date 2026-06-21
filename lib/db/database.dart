@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode, kProfileMode;
 
 part 'database.g.dart';
 
@@ -215,9 +216,17 @@ class AppDatabase extends _$AppDatabase {
 /// driftDatabase() (từ package drift_flutter) tự động chọn đúng backend:
 /// - Mobile (Android/iOS) & Desktop (Windows/macOS/Linux): native SQLite
 /// - Web: SQLite compiled sang WASM, lưu qua IndexedDB của trình duyệt
+///
+/// Đặt tên file khác nhau giữa debug/profile/release để 2 bản build
+/// không vô tình dùng chung 1 database trên cùng máy (vd: khi Bundle ID
+/// giống nhau trên macOS, "q9_finder" chung tên sẽ trỏ vào cùng 1 file).
 QueryExecutor _openConnection() {
+  final dbName = kReleaseMode
+      ? 'q9_finder'
+      : (kProfileMode ? 'q9_finder_profile' : 'q9_finder_debug');
+
   return driftDatabase(
-    name: 'q9_finder',
+    name: dbName,
     web: DriftWebOptions(
       sqlite3Wasm: Uri.parse('sqlite3.wasm'),
       driftWorker: Uri.parse('drift_worker.js'),

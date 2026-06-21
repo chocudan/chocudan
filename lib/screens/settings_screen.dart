@@ -68,6 +68,66 @@ class SettingsScreen extends ConsumerWidget {
                     _RoleBadge(role: user.role),
                   ],
                 ),
+              )
+            else
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    CupertinoPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: CupertinoColors.activeBlue.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          CupertinoIcons.person,
+                          color: CupertinoColors.activeBlue,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Đăng nhập',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: CupertinoColors.activeBlue,
+                              ),
+                            ),
+                            Text(
+                              'Đang dùng ở chế độ khách — đăng nhập để thêm/sửa quán',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: CupertinoColors.secondaryLabel,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        CupertinoIcons.chevron_right,
+                        size: 16,
+                        color: CupertinoColors.tertiaryLabel,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             if (permissions.isAdmin) ...[
               const SizedBox(height: 18),

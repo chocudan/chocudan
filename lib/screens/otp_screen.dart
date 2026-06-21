@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
-import 'home_screen.dart';
+import 'login_screen.dart';
 import 'reset_password_screen.dart';
 
 /// Màn xác thực OTP — dùng chung cho đăng ký và quên mật khẩu.
@@ -72,7 +72,11 @@ class _OtpScreenState extends State<OtpScreen> {
 
     if (widget.isRegister) {
       Navigator.of(context).pushAndRemoveUntil(
-        CupertinoPageRoute(builder: (_) => const HomeScreen()),
+        CupertinoPageRoute(
+          builder: (_) => const LoginScreen(
+            successMessage: 'Tạo tài khoản thành công! Đăng nhập để tiếp tục.',
+          ),
+        ),
         (route) => false,
       );
     } else {

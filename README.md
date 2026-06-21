@@ -141,6 +141,46 @@ Sau khi thêm/sửa bảng hoặc cột, luôn chạy lại:
 dart run build_runner build --delete-conflicting-outputs
 ```
 
+## Đổi icon app + tên hiển thị
+
+Icon nguồn (1024x1024) nằm tại `assets/icon/app_icon.png` — chủ đề
+mái che chợ + tô đồ ăn + 2 căn nhà (cư dân). Để áp dụng icon này cho
+mọi platform (Android, iOS, macOS, Windows):
+
+```bash
+flutter pub get
+dart run flutter_launcher_icons
+```
+
+Lệnh này tự sinh icon đúng kích thước cho từng platform, không cần
+làm thủ công qua Xcode/Android Studio.
+
+**Đổi tên hiển thị trên Dock/Home Screen** (khác với package name nội
+bộ `food_finder` dùng trong code — đổi cái đó không cần thiết và rủi
+ro vì phải sửa toàn bộ import):
+
+> ⚠️ **Quan trọng:** KHÔNG đổi `PRODUCT_NAME` thành tên có dấu/khoảng
+> trắng — sẽ làm code signing thất bại với lỗi `code object is not
+> signed at all` khi build macOS. Giữ `PRODUCT_NAME` không dấu, chỉ
+> đổi tên hiển thị qua `CFBundleDisplayName` (macOS/iOS) hoặc
+> `android:label` (Android) — các key này an toàn với dấu/khoảng trắng.
+
+- **macOS**: sửa `macos/Runner/Info.plist`, thêm/sửa (giữ nguyên
+  `PRODUCT_NAME` trong `AppInfo.xcconfig` không đổi):
+  ```xml
+  <key>CFBundleDisplayName</key>
+  <string>Chợ Cư Dân</string>
+  <key>CFBundleName</key>
+  <string>ChoCuDan</string>
+  ```
+  (`CFBundleName` nên giữ không dấu vì 1 số chỗ hệ thống dùng key này)
+- **iOS**: sửa `ios/Runner/Info.plist`, giá trị `CFBundleDisplayName`
+  → `Chợ Cư Dân`
+- **Android**: sửa `android/app/src/main/AndroidManifest.xml`, thuộc
+  tính `android:label` trong thẻ `<application>` → `Chợ Cư Dân`
+
+Sau khi đổi, chạy lại `flutter clean && flutter run` để áp dụng.
+
 ## Cấu trúc thư mục
 
 ```
@@ -190,3 +230,56 @@ flutter build apk --release --dart-define=ANTHROPIC_API_KEY=YOUR_KEY
 # iOS (cần macOS + Xcode)
 flutter build ios --release --dart-define=ANTHROPIC_API_KEY=YOUR_KEY
 ```
+
+## Build & phân phối bản macOS (.app / .dmg)
+
+### Chỉ chạy trên máy bạn (không cần DMG)
+
+```bash
+flutter build macos --release
+cp -R build/macos/Build/Products/Release/food_finder.app /Applications/
+xattr -cr /Applications/food_finder.app
+```
+
+Dòng `xattr -cr` bắt buộc — vì app chưa được Apple ký (code sign +
+notarize), macOS Gatekeeper sẽ chặn với thông báo *"không thể mở vì
+không xác định được nhà phát triển"* nếu bỏ qua bước này. Lệnh này xoá
+metadata quarantine mà macOS tự gắn vào app mới build/tải về.
+
+Nếu lỡ quên chạy `xattr` và đã bị chặn, vẫn mở được bằng cách:
+**right-click vào app → Open → bấm Open lần nữa** ở hộp thoại cảnh báo
+(chỉ cần làm 1 lần, lần sau mở bình thường).
+
+### Đóng gói DMG để chia sẻ cho máy khác
+
+Dùng khi cần gửi app cho người khác cài (vd: dùng chung giữa nhiều máy).
+
+```bash
+# Cài công cụ tạo DMG (chỉ cần làm 1 lần)
+brew install create-dmg
+
+# Build release trước
+flutter build macos --release
+
+# Tạo DMG bằng script có sẵn trong project
+chmod +x build_dmg.sh
+./build_dmg.sh
+```
+
+Script tạo ra file `Q9Finder.dmg` trong thư mục gốc project. Gửi file
+này cho người khác — họ chỉ cần:
+
+1. Mở file `.dmg`
+2. Kéo icon app vào thư mục **Applications** (có sẵn link tắt trong
+   cửa sổ DMG)
+3. Eject DMG
+4. Chạy `xattr -cr /Applications/food_finder.app` trên máy họ (vì
+   quarantine attribute là theo từng máy, không "đi theo" trong DMG)
+5. Mở app từ Applications như bình thường
+
+> ⚠️ **Lưu ý quan trọng về dữ liệu:** mỗi máy có database SQLite +
+> ảnh **hoàn toàn riêng biệt**, không tự đồng bộ. Cài DMG lên máy thứ
+> 2 sẽ bắt đầu với database trống — đây không phải lỗi, mà là tính
+> chất local-first của app (xem thêm phần "Database lưu ở đâu" bên
+> trên). Nếu cần 2 máy thấy chung 1 bộ dữ liệu, cần chuyển sang backend
+> (Supabase) thay vì SQLite local.

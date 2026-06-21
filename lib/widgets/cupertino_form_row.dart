@@ -63,6 +63,7 @@ class CupertinoLabeledField extends StatelessWidget {
   final TextEditingController controller;
   final bool obscureText;
   final TextInputType? keyboardType;
+  final void Function(String)? onChanged;
 
   const CupertinoLabeledField({
     super.key,
@@ -71,6 +72,7 @@ class CupertinoLabeledField extends StatelessWidget {
     required this.controller,
     this.obscureText = false,
     this.keyboardType,
+    this.onChanged,
   });
 
   @override
@@ -80,6 +82,7 @@ class CupertinoLabeledField extends StatelessWidget {
       placeholder: placeholder,
       obscureText: obscureText,
       keyboardType: keyboardType,
+      onChanged: onChanged,
       prefix: Padding(
         padding: const EdgeInsets.only(left: 12),
         child: Icon(icon, size: 20, color: CupertinoColors.secondaryLabel),

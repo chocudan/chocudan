@@ -9,7 +9,9 @@ import 'forgot_password_screen.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  final String? successMessage;
+
+  const LoginScreen({super.key, this.successMessage});
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -20,6 +22,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _loading = false;
   String? _error;
+  String? _successMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _successMessage = widget.successMessage;
+  }
 
   @override
   void dispose() {
@@ -94,7 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Q9 Finder',
+                'Chợ Cư Dân',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
@@ -106,11 +115,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 28),
+              if (_successMessage != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemGreen.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        CupertinoIcons.checkmark_circle_fill,
+                        color: CupertinoColors.activeGreen,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _successMessage!,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: CupertinoColors.activeGreen,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ],
               CupertinoLabeledField(
                 icon: CupertinoIcons.phone,
                 placeholder: 'Số điện thoại',
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
+                onChanged: (_) {
+                  if (_successMessage != null) {
+                    setState(() => _successMessage = null);
+                  }
+                },
               ),
               const SizedBox(height: 10),
               CupertinoLabeledField(

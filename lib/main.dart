@@ -12,7 +12,7 @@ class Q9FinderApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const CupertinoApp(
-      title: 'Q9 Finder',
+      title: 'Chợ Cư Dân',
       debugShowCheckedModeBanner: false,
       theme: CupertinoThemeData(
         primaryColor: CupertinoColors.activeBlue,

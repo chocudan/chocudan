@@ -9,26 +9,22 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final permissions = ref.watch(permissionsProvider);
-
     return CupertinoPageScaffold(
       child: CustomScrollView(
         slivers: [
           CupertinoSliverNavigationBar(
             largeTitle: const Text('Vinhomes Q9'),
-            trailing: permissions.isAdmin
-                ? CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        CupertinoPageRoute(
-                          builder: (_) => const SettingsScreen(),
-                        ),
-                      );
-                    },
-                    child: const Icon(CupertinoIcons.settings),
-                  )
-                : null,
+            trailing: CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: () {
+                Navigator.of(context).push(
+                  CupertinoPageRoute(
+                    builder: (_) => const SettingsScreen(),
+                  ),
+                );
+              },
+              child: const Icon(CupertinoIcons.settings),
+            ),
           ),
           SliverToBoxAdapter(
             child: Padding(

@@ -45,5 +45,21 @@ dev_dependencies:
   drift_dev: ^2.16.0
   build_runner: ^2.4.8
 
+  # Tự động generate icon cho mọi platform từ 1 file PNG nguồn
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  macos:
+    generate: true
+  windows:
+    generate: true
+    icon_size: 256
+  image_path: "assets/icon/app_icon.png"
+  remove_alpha_ios: true
+
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icon/

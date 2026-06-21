@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kReleaseMode, kProfileMode;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -7,12 +8,22 @@ import 'package:path_provider/path_provider.dart';
 /// bị OS dọn dẹp hoặc đổi container path giữa các lần mở app.
 ///
 /// Hàm này copy ảnh đã chọn vào thư mục Documents riêng của app
-/// (`<app_documents>/place_images/`) để đảm bảo ảnh tồn tại bền vững,
-/// không phụ thuộc vào vòng đời của thư mục tạm.
+/// (`<app_documents>/place_images[_debug|_profile]/`) để đảm bảo ảnh tồn
+/// tại bền vững, không phụ thuộc vào vòng đời của thư mục tạm.
+///
+/// Thư mục được tách theo build mode (debug/profile/release) — giống
+/// cách database.dart tách tên file DB — để bản debug và release trên
+/// cùng máy không vô tình dùng chung ảnh khi Bundle ID giống nhau.
 class ImageStorageHelper {
+  static String get _folderName {
+    if (kReleaseMode) return 'place_images';
+    if (kProfileMode) return 'place_images_profile';
+    return 'place_images_debug';
+  }
+
   static Future<String> persistImage(String tempPath) async {
     final docsDir = await getApplicationDocumentsDirectory();
-    final imagesDir = Directory(p.join(docsDir.path, 'place_images'));
+    final imagesDir = Directory(p.join(docsDir.path, _folderName));
     if (!await imagesDir.exists()) {
       await imagesDir.create(recursive: true);
     }

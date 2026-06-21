@@ -1,0 +1,102 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="roundedSquare">
+      <rect x="0" y="0" width="1024" height="1024" rx="220"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#roundedSquare)">
+    <!-- Background -->
+    <rect width="1024" height="1024" fill="#FF7A45"/>
+
+    <!-- Subtle bottom shade for depth -->
+    <rect y="650" width="1024" height="374" fill="#F2632F"/>
+
+    <!-- Market stall awning (chợ / vendor stall) -->
+    <g>
+      <!-- Awning scallops -->
+      <path d="M 130 420
+               L 130 360
+               Q 130 320 170 320
+               L 250 320
+               Q 290 320 290 360
+               L 290 420
+               Q 290 380 250 380
+               Q 210 380 210 420
+               Q 210 380 170 380
+               Q 130 380 130 420 Z"
+            fill="#FFFFFF"/>
+      <path d="M 290 420
+               L 290 360
+               Q 290 320 330 320
+               L 410 320
+               Q 450 320 450 360
+               L 450 420
+               Q 450 380 410 380
+               Q 370 380 370 420
+               Q 370 380 330 380
+               Q 290 380 290 420 Z"
+            fill="#FFFFFF"/>
+      <path d="M 450 420
+               L 450 360
+               Q 450 320 490 320
+               L 570 320
+               Q 610 320 610 360
+               L 610 420
+               Q 610 380 570 380
+               Q 530 380 530 420
+               Q 530 380 490 380
+               Q 450 380 450 420 Z"
+            fill="#FFFFFF"/>
+      <path d="M 610 420
+               L 610 360
+               Q 610 320 650 320
+               L 730 320
+               Q 770 320 770 360
+               L 770 420
+               Q 770 380 730 380
+               Q 690 380 690 420
+               Q 690 380 650 380
+               Q 610 380 610 420 Z"
+            fill="#FFFFFF"/>
+      <path d="M 770 420
+               L 770 360
+               Q 770 320 810 320
+               L 890 320
+               Q 894 320 894 360
+               L 894 420
+               Q 894 380 854 380
+               Q 814 380 814 420
+               Q 814 380 770 380 Z"
+            fill="#FFFFFF"/>
+    </g>
+
+    <!-- Stall frame posts -->
+    <rect x="160" y="400" width="26" height="320" fill="#FFFFFF"/>
+    <rect x="838" y="400" width="26" height="320" fill="#FFFFFF"/>
+
+    <!-- Counter -->
+    <rect x="140" y="700" width="744" height="60" rx="14" fill="#FFFFFF"/>
+
+    <!-- Food bowl on counter -->
+    <g>
+      <ellipse cx="512" cy="660" rx="120" ry="36" fill="#FFFFFF"/>
+      <path d="M 392 660 Q 392 720 512 720 Q 632 720 632 660 Z" fill="#FFFFFF"/>
+      <!-- Steam -->
+      <path d="M 470 600 Q 460 560 480 530 Q 495 560 480 600" fill="none" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" opacity="0.85"/>
+      <path d="M 545 600 Q 535 560 555 530 Q 570 560 555 600" fill="none" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" opacity="0.85"/>
+    </g>
+
+    <!-- Two small house roofs flanking the stall, representing "cư dân" / residents -->
+    <g opacity="0.95">
+      <path d="M 230 540 L 300 480 L 370 540 Z" fill="#FFFFFF"/>
+      <rect x="250" y="540" width="100" height="70" fill="#FFFFFF"/>
+      <rect x="285" y="565" width="30" height="45" fill="#FF7A45"/>
+    </g>
+    <g opacity="0.95">
+      <path d="M 654 540 L 724 480 L 794 540 Z" fill="#FFFFFF"/>
+      <rect x="674" y="540" width="100" height="70" fill="#FFFFFF"/>
+      <rect x="709" y="565" width="30" height="45" fill="#FF7A45"/>
+    </g>
+  </g>
+</svg>
