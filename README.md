@@ -60,10 +60,54 @@ thư mục `web/`. Nếu lệnh trên báo lỗi/không có, tải thủ công:
 > duyệt, không phải lỗi app. Nếu cần ảnh bền vững trên web, nên chuyển
 > sang lưu ảnh qua cloud storage (Supabase/Cloudinary) thay vì local.
 
+### Thêm ảnh không hoạt động trên macOS/iOS — cần cấp quyền Photo Library
+
+`image_picker` cần khai báo quyền truy cập Ảnh trong file cấu hình
+native. Nếu bấm "Thêm ảnh" mà không có gì xảy ra (hoặc app bị treo),
+thêm đoạn sau:
+
+**macOS** — file `macos/Runner/DebugProfile.entitlements` VÀ
+`macos/Runner/Release.entitlements`, thêm vào trước thẻ đóng `</dict>`:
+
+```xml
+<key>com.apple.security.assets.pictures.read-write</key>
+<true/>
+```
+
+Đồng thời, file `macos/Runner/Info.plist`, thêm trước thẻ đóng
+`</dict>`:
+
+```xml
+<key>NSPhotoLibraryUsageDescription</key>
+<string>Q9 Finder cần quyền truy cập ảnh để thêm hình ảnh cho quán</string>
+```
+
+**iOS** — file `ios/Runner/Info.plist`, thêm trước thẻ đóng `</dict>`:
+
+```xml
+<key>NSPhotoLibraryUsageDescription</key>
+<string>Q9 Finder cần quyền truy cập ảnh để thêm hình ảnh cho quán</string>
+<key>NSCameraUsageDescription</key>
+<string>Q9 Finder cần quyền dùng camera để chụp ảnh cho quán</string>
+```
+
+Sau khi thêm, chạy lại `flutter clean && flutter run` (bắt buộc clean
+vì thay đổi entitlements/Info.plist không tự áp dụng khi hot reload).
+
+Nếu vẫn không xin được quyền, vào **System Settings → Privacy &
+Security → Photos** trên macOS (hoặc **Settings → [Tên app] →
+Photos** trên iOS) và cấp quyền thủ công cho app.
+
+### Mở rộng: ảnh hiện hỗ trợ xem full-screen và xoá
+
+Tap vào ảnh bất kỳ trong gallery sẽ mở màn xem full-screen, vuốt
+ngang để chuyển ảnh, pinch-to-zoom, và có nút xoá ảnh ở góc phải trên.
+
 > ⚠️ Lưu ý: gọi điện (`tel:`) và mở Zalo qua `url_launcher` hoạt động
 > tốt trên mobile, nhưng trên web/desktop sẽ tuỳ thuộc trình duyệt/OS
 > có hỗ trợ scheme đó hay không (web thường mở app gọi điện mặc định
 > của máy nếu có, desktop thường không có ứng dụng xử lý `tel:`).
+
 
 ## Chạy app
 

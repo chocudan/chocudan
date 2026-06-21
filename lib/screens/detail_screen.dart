@@ -7,6 +7,8 @@ import '../db/database.dart';
 import '../db/id_helper.dart';
 import '../providers/app_providers.dart';
 import '../widgets/cross_platform_image.dart';
+import '../widgets/image_viewer_screen.dart';
+import '../services/image_storage_helper.dart';
 import 'add_edit_place_screen.dart';
 
 class DetailScreen extends ConsumerStatefulWidget {
@@ -55,20 +57,55 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
   }
 
   Future<void> _addImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
+    debugPrint('🔵 _addImage() được gọi');
+    try {
+      final picker = ImagePicker();
+      debugPrint('🔵 Đang mở image picker...');
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+      debugPrint('🔵 Kết quả picker: ${picked?.path ?? "null (huỷ chọn)"}');
+      if (picked == null) return;
 
-    final db = ref.read(databaseProvider);
-    await db.insertPlaceImage(
-      PlaceImagesCompanion.insert(
-        id: newId(),
-        placeId: widget.placeId,
-        localPath: picked.path,
-        isPrimary: Value(_images.isEmpty),
-      ),
-    );
-    _loadData();
+      debugPrint('🔵 Đang copy ảnh vào thư mục lưu trữ bền vững...');
+      final persistedPath = await ImageStorageHelper.persistImage(
+        picked.path,
+      );
+      debugPrint('🔵 Ảnh đã lưu tại: $persistedPath');
+
+      final db = ref.read(databaseProvider);
+      await db.insertPlaceImage(
+        PlaceImagesCompanion.insert(
+          id: newId(),
+          placeId: widget.placeId,
+          localPath: persistedPath,
+          isPrimary: Value(_images.isEmpty),
+        ),
+      );
+      _loadData();
+    } catch (e, stack) {
+      debugPrint('🔴 Lỗi khi thêm ảnh: $e');
+      debugPrint('🔴 Stack trace: $stack');
+      if (!mounted) return;
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Không thể thêm ảnh'),
+          content: Text(
+            'Lỗi: $e\n\nKiểm tra app đã được cấp quyền truy cập Ảnh '
+            'chưa (System Settings > Privacy & Security > Photos trên '
+            'macOS, hoặc Settings > Privacy > Photos trên iOS).',
+          ),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('Đã hiểu'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Future<void> _callPhone() async {
@@ -179,6 +216,85 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
     return map;
   }
 
+  void _showActionMenu(
+    BuildContext context,
+    Place place,
+    Permissions permissions,
+  ) {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: Text(place.name),
+        actions: [
+          if (permissions.canEditPlace)
+            CupertinoActionSheetAction(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await Navigator.of(this.context).push(
+                  CupertinoPageRoute(
+                    builder: (_) => AddEditPlaceScreen(
+                      type: place.type,
+                      existingPlace: place,
+                    ),
+                  ),
+                );
+                _loadData();
+              },
+              child: const Text('Sửa thông tin'),
+            ),
+          if (permissions.canDeletePlace)
+            CupertinoActionSheetAction(
+              isDestructiveAction: true,
+              onPressed: () {
+                Navigator.of(context).pop();
+                _confirmDeletePlace(place);
+              },
+              child: const Text('Xoá quán'),
+            ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Huỷ'),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeletePlace(Place place) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Xoá quán này?'),
+        content: Text(
+          '"${place.name}" cùng toàn bộ món ăn, ảnh, đánh giá sẽ bị xoá '
+          'vĩnh viễn. Hành động này không thể hoàn tác.',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Huỷ'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () async {
+              final db = ref.read(databaseProvider);
+              await db.deleteMenuItemsForPlace(place.id);
+              for (final img in _images) {
+                await db.deletePlaceImage(img.id);
+                await ImageStorageHelper.deleteImageFile(img.localPath);
+              }
+              await db.deletePlace(place.id);
+              if (!mounted) return;
+              Navigator.of(context).pop(); // đóng dialog
+              Navigator.of(context).pop(); // quay về feed
+            },
+            child: const Text('Xoá'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final permissions = ref.watch(permissionsProvider);
@@ -199,21 +315,11 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
       navigationBar: CupertinoNavigationBar(
         previousPageTitle: widget.backTitle,
         middle: const Text('Chi tiết'),
-        trailing: permissions.canEditPlace
+        trailing: (permissions.canEditPlace || permissions.canDeletePlace)
             ? CupertinoButton(
                 padding: EdgeInsets.zero,
-                onPressed: () async {
-                  await Navigator.of(context).push(
-                    CupertinoPageRoute(
-                      builder: (_) => AddEditPlaceScreen(
-                        type: place.type,
-                        existingPlace: place,
-                      ),
-                    ),
-                  );
-                  _loadData();
-                },
-                child: const Text('Sửa'),
+                onPressed: () => _showActionMenu(context, place, permissions),
+                child: const Icon(CupertinoIcons.ellipsis_circle),
               )
             : null,
       ),
@@ -268,48 +374,78 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     children: [
-                      GestureDetector(
-                        onTap: _addImage,
-                        child: Container(
-                          width: 90,
-                          height: 90,
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: CupertinoColors.systemGrey3,
-                              style: BorderStyle.solid,
-                            ),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                CupertinoIcons.add,
-                                color: CupertinoColors.activeBlue,
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                'Thêm ảnh',
-                                style: TextStyle(fontSize: 10),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      ..._images.map(
-                        (img) => Container(
-                          width: 90,
-                          height: 90,
-                          margin: const EdgeInsets.only(right: 8),
-                          clipBehavior: Clip.antiAlias,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: CrossPlatformImage(
-                            path: img.localPath,
+                      if (permissions.canEditPlace)
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _addImage,
+                          child: Container(
                             width: 90,
                             height: 90,
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: CupertinoColors.systemGrey3,
+                                style: BorderStyle.solid,
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  CupertinoIcons.add,
+                                  color: CupertinoColors.activeBlue,
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Thêm ảnh',
+                                  style: TextStyle(fontSize: 10),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ..._images.asMap().entries.map(
+                        (entry) => GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              CupertinoPageRoute(
+                                builder: (_) => ImageViewerScreen(
+                                  imagePaths:
+                                      _images.map((i) => i.localPath).toList(),
+                                  initialIndex: entry.key,
+                                  onDelete: permissions.canEditPlace
+                                      ? (index) async {
+                                          final db = ref.read(databaseProvider);
+                                          final imageToDelete =
+                                              _images[index];
+                                          await db.deletePlaceImage(
+                                            imageToDelete.id,
+                                          );
+                                          await ImageStorageHelper
+                                              .deleteImageFile(
+                                            imageToDelete.localPath,
+                                          );
+                                          _loadData();
+                                        }
+                                      : null,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            width: 90,
+                            height: 90,
+                            margin: const EdgeInsets.only(right: 8),
+                            clipBehavior: Clip.antiAlias,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: CrossPlatformImage(
+                              path: entry.value.localPath,
+                              width: 90,
+                              height: 90,
+                            ),
                           ),
                         ),
                       ),
