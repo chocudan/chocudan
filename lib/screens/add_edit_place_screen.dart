@@ -38,6 +38,7 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
 
   List<String> _categoryTags = [];
   List<DraftImage> _draftImages = [];
+  bool _imagesLoaded = false; // track khi nào ảnh cũ đã load xong
   bool _freeship = false;
   bool _aiLoading = false;
   String? _error;
@@ -85,12 +86,16 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
           ),
         ),
       );
+      // FIX #1: Load ảnh cũ vào _draftImages để không bị mất khi thêm ảnh mới.
+      // _imagesLoaded = true báo cho build() biết đã có data, dùng làm key
+      // để force MultiImagePicker rebuild với đúng initialImages.
       _draftImages = images
           .map((img) => DraftImage(
                 localPath: img.localPath,
                 isPrimary: img.isPrimary,
               ))
           .toList();
+      _imagesLoaded = true;
     });
   }
 
@@ -236,9 +241,6 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
       );
     }
 
-    // Đồng bộ ảnh: xoá hết ảnh cũ trong DB rồi ghi lại theo draft hiện tại
-    // (đơn giản hơn so với diff từng ảnh, chấp nhận được vì số ảnh/quán
-    // thường không quá nhiều).
     if (_isEditMode) {
       final oldImages = await db.getImagesForPlace(placeId);
       for (final img in oldImages) {
@@ -354,10 +356,20 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       padding: const EdgeInsets.all(8),
-                      child: MultiImagePicker(
-                        initialImages: _draftImages,
-                        onChanged: (imgs) => _draftImages = imgs,
-                      ),
+                      // FIX #1: ValueKey(_imagesLoaded) force MultiImagePicker
+                      // rebuild khi _loadExistingData() xong, đảm bảo
+                      // initialImages có đủ ảnh cũ trước khi user thêm ảnh mới.
+                      child: _isEditMode && !_imagesLoaded
+                          ? const SizedBox(
+                              height: 100,
+                              child: Center(child: CupertinoActivityIndicator()),
+                            )
+                          : MultiImagePicker(
+                              key: ValueKey(_imagesLoaded),
+                              initialImages: _draftImages,
+                              onChanged: (imgs) =>
+                                  setState(() => _draftImages = imgs),
+                            ),
                     ),
                     const SizedBox(height: 14),
                     const _SectionHeader('Thông tin quán'),
@@ -388,7 +400,7 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
                         AppFormRow(
                           label: 'Giá trung bình',
                           controller: _avgPriceController,
-                          placeholder: 'Vd: 20k - 50k',
+                          placeholder: 'Vd: 20.000đ - 50.000đ',
                         ),
                         AppFormRow(
                           label: 'Freeship',
@@ -547,44 +559,88 @@ class _MenuDraftRowState extends State<_MenuDraftRow> {
           bottom: BorderSide(color: CupertinoColors.systemGrey5, width: 0.5),
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              GestureDetector(
+                onTap: widget.onRemove,
+                child: const Icon(
+                  CupertinoIcons.minus_circle_fill,
+                  color: CupertinoColors.destructiveRed,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 3,
+                child: CupertinoTextField(
+                  controller: _nameCtrl,
+                  placeholder: 'Tên món',
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                  decoration: const BoxDecoration(),
+                  style: const TextStyle(fontSize: 14),
+                  onChanged: (v) {
+                    widget.draft.name = v;
+                    widget.onChanged();
+                  },
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: CupertinoTextField(
+                  controller: _priceCtrl,
+                  placeholder: 'Giá',
+                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                  decoration: const BoxDecoration(),
+                  style: const TextStyle(fontSize: 14),
+                  textAlign: TextAlign.right,
+                  onChanged: (v) {
+                    widget.draft.price = v;
+                    widget.onChanged();
+                  },
+                ),
+              ),
+            ],
+          ),
+          // FIX #6: Thêm toggle bestseller ngay trong row món ăn
           GestureDetector(
-            onTap: widget.onRemove,
-            child: const Icon(
-              CupertinoIcons.minus_circle_fill,
-              color: CupertinoColors.destructiveRed,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 3,
-            child: CupertinoTextField(
-              controller: _nameCtrl,
-              placeholder: 'Tên món',
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-              decoration: const BoxDecoration(),
-              style: const TextStyle(fontSize: 14),
-              onChanged: (v) {
-                widget.draft.name = v;
-                widget.onChanged();
-              },
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: CupertinoTextField(
-              controller: _priceCtrl,
-              placeholder: 'Giá',
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-              decoration: const BoxDecoration(),
-              style: const TextStyle(fontSize: 14),
-              textAlign: TextAlign.right,
-              onChanged: (v) {
-                widget.draft.price = v;
-                widget.onChanged();
-              },
+            onTap: () {
+              setState(() {
+                widget.draft.isBestSeller = !widget.draft.isBestSeller;
+              });
+              widget.onChanged();
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(left: 28, top: 4, bottom: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    widget.draft.isBestSeller
+                        ? CupertinoIcons.flame_fill
+                        : CupertinoIcons.flame,
+                    size: 14,
+                    color: widget.draft.isBestSeller
+                        ? CupertinoColors.systemOrange
+                        : CupertinoColors.tertiaryLabel,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Bestseller',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: widget.draft.isBestSeller
+                          ? CupertinoColors.systemOrange
+                          : CupertinoColors.tertiaryLabel,
+                      fontWeight: widget.draft.isBestSeller
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

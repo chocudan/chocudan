@@ -115,8 +115,21 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         break;
       case SortOption.priceAsc:
-        // Giữ nguyên thứ tự — việc tính giá thấp nhất chính xác để sort
-        // cần parse phức tạp hơn, ưu tiên đơn giản cho MVP.
+        // FIX #4: Sort theo giá nhỏ nhất — parse cả định dạng VND "10.000đ"
+        // và định dạng "10k". Ưu tiên avgPriceRange của quán, fallback sang
+        // giá thấp nhất từ menu. Quán không có giá xếp cuối.
+        sorted.sort((a, b) {
+          double? pa = a.avgPriceRange != null
+              ? PlaceCard.parseMinPrice(a.avgPriceRange!)
+              : PlaceCard.minPriceFromMenu(_menuByPlace[a.id] ?? []);
+          double? pb = b.avgPriceRange != null
+              ? PlaceCard.parseMinPrice(b.avgPriceRange!)
+              : PlaceCard.minPriceFromMenu(_menuByPlace[b.id] ?? []);
+          if (pa == null && pb == null) return 0;
+          if (pa == null) return 1;
+          if (pb == null) return -1;
+          return pa.compareTo(pb);
+        });
         break;
       case SortOption.viewsDesc:
         sorted.sort((a, b) => b.viewCount.compareTo(a.viewCount));
