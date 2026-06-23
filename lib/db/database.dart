@@ -38,9 +38,17 @@ class Places extends Table {
   BoolColumn get freeship => boolean().withDefault(const Constant(false))();
   TextColumn get freeshipNote => text().nullable()();
   TextColumn get openHours => text().nullable()();
+  // Nhiều danh mục, lưu dạng "Ăn uống,Bánh,Đồ uống" — tách bằng dấu phẩy.
+  // Dùng kiểu lưu trữ đơn giản này để dễ sync với filter (so khớp chuỗi
+  // con), không cần bảng phụ Categories riêng cho MVP.
   TextColumn get category => text().nullable()();
+  // Khoảng giá trung bình do người thêm quán tự nhập tay, vd "20k-50k"
+  // (không tự tính từ menu vì giá món thường viết tự do, khó parse chính
+  // xác — xem ghi chú ở MenuItems.priceText).
+  TextColumn get avgPriceRange => text().nullable()();
   TextColumn get note => text().nullable()();
   TextColumn get createdBy => text().nullable()(); // FK -> Users.id
+  IntColumn get viewCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 
@@ -76,6 +84,19 @@ class Ratings extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+// Bình luận của user đã login (cần Admin duyệt trước khi hiển thị công khai)
+class Comments extends Table {
+  TextColumn get id => text()();
+  TextColumn get placeId => text()(); // FK -> Places.id
+  TextColumn get userId => text()(); // FK -> Users.id — bắt buộc, không ẩn danh
+  TextColumn get content => text()();
+  BoolColumn get isApproved => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 // Ảnh của quán (lưu local path trên thiết bị)
 class PlaceImages extends Table {
   TextColumn get id => text()();
@@ -90,7 +111,9 @@ class PlaceImages extends Table {
 
 // ----- Database -----
 
-@DriftDatabase(tables: [Users, Places, MenuItems, Ratings, PlaceImages])
+@DriftDatabase(
+  tables: [Users, Places, MenuItems, Ratings, PlaceImages, Comments],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -98,7 +121,23 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.withExecutor(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (m) async {
+          await m.createAll();
+        },
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            // v1 -> v2: thêm avgPriceRange, viewCount vào Places;
+            // thêm bảng Comments mới.
+            await m.addColumn(places, places.avgPriceRange);
+            await m.addColumn(places, places.viewCount);
+            await m.createTable(comments);
+          }
+        },
+      );
 
   // ----- Place queries -----
 
@@ -132,10 +171,33 @@ class AppDatabase extends _$AppDatabase {
       ..addColumns([places.category])
       ..where(places.type.equals(type) & places.category.isNotNull());
     final rows = await query.get();
-    return rows
-        .map((r) => r.read(places.category))
-        .whereType<String>()
-        .toList();
+
+    // category lưu dạng "Ăn uống,Bánh" — tách ra thành từng tag riêng,
+    // loại trùng, để hiện đúng danh sách tag cho filter sheet.
+    final allTags = <String>{};
+    for (final row in rows) {
+      final raw = row.read(places.category);
+      if (raw == null || raw.trim().isEmpty) continue;
+      for (final tag in raw.split(',')) {
+        final trimmed = tag.trim();
+        if (trimmed.isNotEmpty) allTags.add(trimmed);
+      }
+    }
+    return allTags.toList()..sort();
+  }
+
+  /// Tăng lượt xem +1 mỗi khi người dùng mở màn chi tiết quán.
+  Future<void> incrementViewCount(String placeId) async {
+    final place = await getPlaceById(placeId);
+    if (place == null) return;
+    await (update(places)..where((p) => p.id.equals(placeId))).write(
+      PlacesCompanion(viewCount: Value(place.viewCount + 1)),
+    );
+  }
+
+  /// Lưu nhiều quán cùng lúc từ JSON import — nếu trùng id thì đè (upsert).
+  Future<void> upsertPlace(PlacesCompanion place) async {
+    await into(places).insertOnConflictUpdate(place);
   }
 
   // ----- MenuItem queries -----
@@ -187,6 +249,47 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> deletePlaceImage(String id) {
     return (delete(placeImages)..where((i) => i.id.equals(id))).go();
+  }
+
+  // ----- Comment queries -----
+
+  /// Chỉ lấy comment đã được Admin duyệt — dùng cho màn chi tiết công khai.
+  Future<List<Comment>> getApprovedCommentsForPlace(String placeId) {
+    return (select(comments)
+          ..where(
+            (c) => c.placeId.equals(placeId) & c.isApproved.equals(true),
+          )
+          ..orderBy([(c) => OrderingTerm.desc(c.createdAt)]))
+        .get();
+  }
+
+  /// Lấy toàn bộ comment (kể cả chưa duyệt) — dùng cho màn quản lý của Admin.
+  Future<List<Comment>> getAllComments() {
+    return (select(comments)
+          ..orderBy([(c) => OrderingTerm.desc(c.createdAt)]))
+        .get();
+  }
+
+  Future<int> getPendingCommentCount() async {
+    final query = selectOnly(comments)
+      ..addColumns([comments.id.count()])
+      ..where(comments.isApproved.equals(false));
+    final row = await query.getSingle();
+    return row.read(comments.id.count()) ?? 0;
+  }
+
+  Future<int> insertComment(CommentsCompanion comment) {
+    return into(comments).insert(comment);
+  }
+
+  Future<void> setCommentApproval(String id, bool approved) async {
+    await (update(comments)..where((c) => c.id.equals(id))).write(
+      CommentsCompanion(isApproved: Value(approved)),
+    );
+  }
+
+  Future<int> deleteComment(String id) {
+    return (delete(comments)..where((c) => c.id.equals(id))).go();
   }
 
   // ----- User queries -----

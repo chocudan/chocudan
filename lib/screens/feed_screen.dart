@@ -25,6 +25,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   List<Place> _places = [];
   Map<String, List<MenuItem>> _menuByPlace = {};
   Map<String, double?> _ratingByPlace = {};
+  Map<String, PlaceImage?> _primaryImageByPlace = {};
   List<String> _categories = [];
   bool _loading = true;
 
@@ -42,9 +43,17 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
     final menuMap = <String, List<MenuItem>>{};
     final ratingMap = <String, double?>{};
+    final imageMap = <String, PlaceImage?>{};
     for (final place in places) {
       menuMap[place.id] = await db.getMenuItemsForPlace(place.id);
       ratingMap[place.id] = await db.getAverageRating(place.id);
+      final images = await db.getImagesForPlace(place.id);
+      imageMap[place.id] = images.isEmpty
+          ? null
+          : images.firstWhere(
+              (img) => img.isPrimary,
+              orElse: () => images.first,
+            );
     }
 
     if (!mounted) return;
@@ -52,9 +61,19 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       _places = places;
       _menuByPlace = menuMap;
       _ratingByPlace = ratingMap;
+      _primaryImageByPlace = imageMap;
       _categories = categories;
       _loading = false;
     });
+  }
+
+  /// Lấy danh sách tag của 1 quán từ chuỗi "Ăn uống,Bánh" -> ["Ăn uống","Bánh"]
+  List<String> _tagsOf(Place p) {
+    return (p.category ?? '')
+        .split(',')
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
   }
 
   List<Place> get _filteredPlaces {
@@ -71,9 +90,12 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     }
 
     if (_filters.categories.isNotEmpty) {
-      result = result
-          .where((p) => _filters.categories.contains(p.category))
-          .toList();
+      // Quán khớp filter nếu có ÍT NHẤT 1 tag trùng với tag đã chọn
+      // (không phải so khớp toàn bộ chuỗi category).
+      result = result.where((p) {
+        final placeTags = _tagsOf(p);
+        return placeTags.any((tag) => _filters.categories.contains(tag));
+      }).toList();
     }
 
     if (_filters.freeshipOnly) {
@@ -95,6 +117,9 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       case SortOption.priceAsc:
         // Giữ nguyên thứ tự — việc tính giá thấp nhất chính xác để sort
         // cần parse phức tạp hơn, ưu tiên đơn giản cho MVP.
+        break;
+      case SortOption.viewsDesc:
+        sorted.sort((a, b) => b.viewCount.compareTo(a.viewCount));
         break;
     }
 
@@ -157,9 +182,11 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                               color: CupertinoColors.label,
                             ),
                             const SizedBox(width: 4),
-                            const Text(
-                              'Lọc',
-                              style: TextStyle(
+                            Text(
+                              _filters.categories.isEmpty
+                                  ? 'Lọc'
+                                  : 'Lọc (${_filters.categories.length})',
+                              style: const TextStyle(
                                 color: CupertinoColors.label,
                                 fontSize: 14,
                               ),
@@ -195,6 +222,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                                           place: place,
                                           menuItems:
                                               _menuByPlace[place.id] ?? [],
+                                          primaryImage:
+                                              _primaryImageByPlace[place.id],
                                           avgRating: _ratingByPlace[place.id],
                                           onTap: () async {
                                             await Navigator.of(context).push(

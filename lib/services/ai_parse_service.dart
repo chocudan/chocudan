@@ -92,7 +92,7 @@ không có ```json. Đúng theo schema sau:
   "freeship": boolean,              // true nếu post có đề cập freeship
   "freeshipNote": string | null,    // mô tả điều kiện freeship nguyên văn, vd "đơn từ 50k, dưới phụ thu 5k"
   "openHours": string | null,       // giờ mở cửa nếu có, vd "8:30 - 22:30"
-  "category": string | null,        // 1 từ/cụm ngắn: "Ăn uống", "Trái cây", "Bánh", "Lẩu", "Đồ khô"...
+  "category": string | null,        // 1 hoặc nhiều danh mục, cách nhau bởi dấu phẩy, vd "Ăn uống,Đồ uống" hoặc "Bánh". Không thêm khoảng trắng thừa quanh dấu phẩy.
   "menuItems": [
     {
       "name": string,               // tên món

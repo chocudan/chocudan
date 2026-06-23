@@ -3,14 +3,25 @@
 App tổng hợp quán ăn & địa điểm vui chơi quanh Vinhomes Q9, parse từ post
 Facebook bằng AI, dùng UI Cupertino (iOS-style) trên Flutter.
 
-## Tính năng
+## Tính năng (cập nhật)
 
 - 🔐 Đăng nhập / Đăng ký / Quên mật khẩu (OTP demo — xem ghi chú bên dưới)
 - 🏠 Trang chủ chọn "Ăn uống" hoặc "Đi chơi"
-- 🔍 Feed có search + filter (danh mục, freeship, sắp xếp)
-- 📋 Chi tiết quán: ảnh, menu theo nhóm, đánh giá, gọi điện/Zalo
-- ➕ Thêm/sửa quán: dán post Facebook → AI tự trích xuất, hoặc nhập tay
+- 🔍 Feed có search + filter (đa danh mục dạng tag, freeship, sắp xếp
+  theo đánh giá/mới nhất/lượt xem)
+- 🖼️ Card feed hiện ảnh đại diện + món nổi bật ngay ngoài, không cần
+  bấm vào mới thấy
+- 📋 Chi tiết quán: gallery nhiều ảnh (xem full-screen, vuốt/phím mũi
+  tên để chuyển), menu theo nhóm, giá trung bình, trạng thái đang
+  mở/đóng cửa, lượt xem, thời gian cập nhật cuối, bình luận (cần Admin
+  duyệt), đánh giá sao, gọi điện/Zalo
+- ➕ Thêm/sửa quán: dán post Facebook → AI tự trích xuất, hoặc nhập
+  tay; danh mục dạng tag (nhiều danh mục/quán); upload nhiều ảnh cùng
+  lúc, chọn ảnh đại diện
 - 👥 Quản lý người dùng + phân quyền (Admin/Editor/Viewer/Guest)
+- 💬 Quản lý bình luận (duyệt/từ chối/xoá) — chỉ Admin
+- 📥 Import hàng loạt quán từ file JSON (xem mẫu ở
+  `assets/sample_import.json`)
 - 💾 100% local, dùng SQLite (drift) — không tốn phí cloud
 
 ## Yêu cầu trước khi chạy
@@ -101,7 +112,15 @@ Photos** trên iOS) và cấp quyền thủ công cho app.
 ### Mở rộng: ảnh hiện hỗ trợ xem full-screen và xoá
 
 Tap vào ảnh bất kỳ trong gallery sẽ mở màn xem full-screen, vuốt
-ngang để chuyển ảnh, pinch-to-zoom, và có nút xoá ảnh ở góc phải trên.
+ngang để chuyển ảnh (hoặc dùng phím mũi tên trái/phải trên
+desktop/web), pinch-to-zoom, và có nút xoá ảnh ở góc phải trên.
+
+### Import JSON cần quyền tương tự ảnh trên macOS
+
+Tính năng "Import dữ liệu (JSON)" dùng `file_picker`, cũng cần
+entitlement `com.apple.security.files.user-selected.read-only` —
+**đã có sẵn** nếu bạn từng làm theo hướng dẫn "Thêm ảnh không hoạt
+động" ở trên. Nếu chưa, làm theo phần đó trước khi dùng Import JSON.
 
 > ⚠️ Lưu ý: gọi điện (`tel:`) và mở Zalo qua `url_launcher` hoạt động
 > tốt trên mobile, nhưng trên web/desktop sẽ tuỳ thuộc trình duyệt/OS
@@ -141,6 +160,12 @@ Sau khi thêm/sửa bảng hoặc cột, luôn chạy lại:
 dart run build_runner build --delete-conflicting-outputs
 ```
 
+> ℹ️ **Lưu ý migration:** schema vừa nâng từ version 1 lên 2 (thêm
+> `avgPriceRange`, `viewCount` vào bảng Places; thêm bảng `Comments`
+> mới). Drift tự động chạy migration khi mở app lần đầu sau khi cập
+> nhật — dữ liệu cũ (quán, ảnh, user, rating) được giữ nguyên, không
+> cần xoá database thủ công.
+
 ## Đổi icon app + tên hiển thị
 
 Icon nguồn (1024x1024) nằm tại `assets/icon/app_icon.png` — chủ đề
@@ -178,6 +203,17 @@ ro vì phải sửa toàn bộ import):
   → `Chợ Cư Dân`
 - **Android**: sửa `android/app/src/main/AndroidManifest.xml`, thuộc
   tính `android:label` trong thẻ `<application>` → `Chợ Cư Dân`
+
+> ⚠️ **macOS:** cần set CẢ HAI key trong `Info.plist` để tên hiển thị
+> áp dụng đầy đủ (Dock/Finder lẫn title bar cửa sổ):
+> ```xml
+> <key>CFBundleDisplayName</key>
+> <string>Chợ Cư Dân</string>
+> <key>CFBundleName</key>
+> <string>Chợ Cư Dân</string>
+> ```
+> Thiếu `CFBundleName` thì title bar cửa sổ vẫn hiện tên cũ dù
+> `CFBundleDisplayName` đã đổi đúng trên Dock/Finder.
 
 Sau khi đổi, chạy lại `flutter clean && flutter run` để áp dụng.
 

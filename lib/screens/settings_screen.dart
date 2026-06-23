@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/app_providers.dart';
 import 'login_screen.dart';
 import 'user_management_screen.dart';
+import 'comment_management_screen.dart';
+import 'import_json_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -143,6 +145,30 @@ class SettingsScreen extends ConsumerWidget {
                       Navigator.of(context).push(
                         CupertinoPageRoute(
                           builder: (_) => const UserManagementScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  CupertinoListTile(
+                    leading: const Icon(CupertinoIcons.chat_bubble_2),
+                    title: const Text('Quản lý bình luận'),
+                    trailing: const CupertinoListTileChevron(),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        CupertinoPageRoute(
+                          builder: (_) => const CommentManagementScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  CupertinoListTile(
+                    leading: const Icon(CupertinoIcons.square_arrow_down),
+                    title: const Text('Import dữ liệu (JSON)'),
+                    trailing: const CupertinoListTileChevron(),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        CupertinoPageRoute(
+                          builder: (_) => const ImportJsonScreen(),
                         ),
                       );
                     },

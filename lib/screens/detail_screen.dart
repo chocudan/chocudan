@@ -1,14 +1,16 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' show Value;
-import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../db/database.dart';
 import '../db/id_helper.dart';
 import '../providers/app_providers.dart';
+import '../services/image_storage_helper.dart';
 import '../widgets/cross_platform_image.dart';
 import '../widgets/image_viewer_screen.dart';
-import '../services/image_storage_helper.dart';
+import '../widgets/open_status_badge.dart';
+import '../widgets/comment_section.dart';
+import '../widgets/multi_image_picker.dart';
 import 'add_edit_place_screen.dart';
 
 class DetailScreen extends ConsumerStatefulWidget {
@@ -31,6 +33,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
   List<PlaceImage> _images = [];
   List<Rating> _ratings = [];
   bool _loading = true;
+  bool _viewCounted = false;
 
   @override
   void initState() {
@@ -46,6 +49,11 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
     final images = await db.getImagesForPlace(widget.placeId);
     final ratings = await db.getRatingsForPlace(widget.placeId);
 
+    if (!_viewCounted) {
+      _viewCounted = true;
+      await db.incrementViewCount(widget.placeId);
+    }
+
     if (!mounted) return;
     setState(() {
       _place = place;
@@ -56,56 +64,90 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
     });
   }
 
-  Future<void> _addImage() async {
-    debugPrint('🔵 _addImage() được gọi');
-    try {
-      final picker = ImagePicker();
-      debugPrint('🔵 Đang mở image picker...');
-      final picked = await picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 80,
-      );
-      debugPrint('🔵 Kết quả picker: ${picked?.path ?? "null (huỷ chọn)"}');
-      if (picked == null) return;
+  List<PlaceImage> get _sortedImages {
+    final list = List<PlaceImage>.of(_images);
+    list.sort((a, b) {
+      if (a.isPrimary == b.isPrimary) return 0;
+      return a.isPrimary ? -1 : 1;
+    });
+    return list;
+  }
 
-      debugPrint('🔵 Đang copy ảnh vào thư mục lưu trữ bền vững...');
-      final persistedPath = await ImageStorageHelper.persistImage(
-        picked.path,
-      );
-      debugPrint('🔵 Ảnh đã lưu tại: $persistedPath');
+  Future<void> _openImagePicker() async {
+    final draftImages = _images
+        .map((img) =>
+            DraftImage(localPath: img.localPath, isPrimary: img.isPrimary))
+        .toList();
 
-      final db = ref.read(databaseProvider);
+    await showCupertinoModalPopup(
+      context: context,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.4,
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
+          color: CupertinoColors.systemGroupedBackground,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Quản lý ảnh',
+                    style:
+                        TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                  ),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () async {
+                      await _syncImages(draftImages);
+                      if (context.mounted) Navigator.of(context).pop();
+                    },
+                    child: const Text('Xong'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: MultiImagePicker(
+                    initialImages: draftImages,
+                    onChanged: (imgs) {
+                      draftImages
+                        ..clear()
+                        ..addAll(imgs);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _syncImages(List<DraftImage> draftImages) async {
+    final db = ref.read(databaseProvider);
+    final oldImages = await db.getImagesForPlace(widget.placeId);
+    for (final img in oldImages) {
+      await db.deletePlaceImage(img.id);
+    }
+    for (final draft in draftImages) {
       await db.insertPlaceImage(
         PlaceImagesCompanion.insert(
           id: newId(),
           placeId: widget.placeId,
-          localPath: persistedPath,
-          isPrimary: Value(_images.isEmpty),
-        ),
-      );
-      _loadData();
-    } catch (e, stack) {
-      debugPrint('🔴 Lỗi khi thêm ảnh: $e');
-      debugPrint('🔴 Stack trace: $stack');
-      if (!mounted) return;
-      showCupertinoDialog(
-        context: context,
-        builder: (context) => CupertinoAlertDialog(
-          title: const Text('Không thể thêm ảnh'),
-          content: Text(
-            'Lỗi: $e\n\nKiểm tra app đã được cấp quyền truy cập Ảnh '
-            'chưa (System Settings > Privacy & Security > Photos trên '
-            'macOS, hoặc Settings > Privacy > Photos trên iOS).',
-          ),
-          actions: [
-            CupertinoDialogAction(
-              child: const Text('Đã hiểu'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
+          localPath: draft.localPath,
+          isPrimary: Value(draft.isPrimary),
         ),
       );
     }
+    _loadData();
   }
 
   Future<void> _callPhone() async {
@@ -285,14 +327,22 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
               }
               await db.deletePlace(place.id);
               if (!mounted) return;
-              Navigator.of(context).pop(); // đóng dialog
-              Navigator.of(context).pop(); // quay về feed
+              Navigator.of(context).pop();
+              Navigator.of(context).pop();
             },
             child: const Text('Xoá'),
           ),
         ],
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/'
+        '${date.month.toString().padLeft(2, '0')}/'
+        '${date.year} '
+        '${date.hour.toString().padLeft(2, '0')}:'
+        '${date.minute.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -310,6 +360,12 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
         ? null
         : _ratings.map((r) => r.stars).reduce((a, b) => a + b) /
             _ratings.length;
+    final categoryTags = (place.category ?? '')
+        .split(',')
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+    final sortedImages = _sortedImages;
 
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
@@ -338,6 +394,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                 ),
                 const SizedBox(height: 4),
                 Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   spacing: 10,
                   children: [
                     if (place.address != null)
@@ -349,17 +406,94 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                         ),
                       ),
                     if (place.openHours != null)
-                      Text(
-                        '🕐 ${place.openHours}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: CupertinoColors.secondaryLabel,
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '🕐 ${place.openHours}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: CupertinoColors.secondaryLabel,
+                            ),
+                          ),
+                          OpenStatusBadge(openHours: place.openHours),
+                        ],
                       ),
                   ],
                 ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    if (place.avgPriceRange != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: CupertinoColors.systemGrey6,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '💰 ${place.avgPriceRange}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Row(
+                      children: [
+                        const Icon(
+                          CupertinoIcons.eye,
+                          size: 13,
+                          color: CupertinoColors.tertiaryLabel,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${place.viewCount} lượt xem',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: CupertinoColors.tertiaryLabel,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                if (categoryTags.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: categoryTags
+                        .map(
+                          (tag) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: CupertinoColors.activeBlue
+                                  .withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              tag,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: CupertinoColors.activeBlue,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
                 if (place.freeshipNote != null) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     '🚚 ${place.freeshipNote}',
                     style: const TextStyle(
@@ -377,7 +511,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                       if (permissions.canEditPlace)
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: _addImage,
+                          onTap: _openImagePicker,
                           child: Container(
                             width: 90,
                             height: 90,
@@ -385,7 +519,6 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                             decoration: BoxDecoration(
                               border: Border.all(
                                 color: CupertinoColors.systemGrey3,
-                                style: BorderStyle.solid,
                               ),
                               borderRadius: BorderRadius.circular(10),
                             ),
@@ -393,38 +526,41 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  CupertinoIcons.add,
+                                  CupertinoIcons.photo_on_rectangle,
                                   color: CupertinoColors.activeBlue,
                                 ),
                                 SizedBox(height: 2),
                                 Text(
-                                  'Thêm ảnh',
-                                  style: TextStyle(fontSize: 10),
+                                  'Quản lý ảnh',
+                                  style: TextStyle(fontSize: 9),
+                                  textAlign: TextAlign.center,
                                 ),
                               ],
                             ),
                           ),
                         ),
-                      ..._images.asMap().entries.map(
+                      ...sortedImages.asMap().entries.map(
                         (entry) => GestureDetector(
                           onTap: () {
                             Navigator.of(context).push(
                               CupertinoPageRoute(
                                 builder: (_) => ImageViewerScreen(
-                                  imagePaths:
-                                      _images.map((i) => i.localPath).toList(),
+                                  imagePaths: sortedImages
+                                      .map((i) => i.localPath)
+                                      .toList(),
                                   initialIndex: entry.key,
                                   onDelete: permissions.canEditPlace
                                       ? (index) async {
-                                          final db = ref.read(databaseProvider);
-                                          final imageToDelete =
-                                              _images[index];
+                                          final db =
+                                              ref.read(databaseProvider);
+                                          final imgToDelete =
+                                              sortedImages[index];
                                           await db.deletePlaceImage(
-                                            imageToDelete.id,
+                                            imgToDelete.id,
                                           );
                                           await ImageStorageHelper
                                               .deleteImageFile(
-                                            imageToDelete.localPath,
+                                            imgToDelete.localPath,
                                           );
                                           _loadData();
                                         }
@@ -433,19 +569,39 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                               ),
                             );
                           },
-                          child: Container(
-                            width: 90,
-                            height: 90,
-                            margin: const EdgeInsets.only(right: 8),
-                            clipBehavior: Clip.antiAlias,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: CrossPlatformImage(
-                              path: entry.value.localPath,
-                              width: 90,
-                              height: 90,
-                            ),
+                          child: Stack(
+                            children: [
+                              Container(
+                                width: 90,
+                                height: 90,
+                                margin: const EdgeInsets.only(right: 8),
+                                clipBehavior: Clip.antiAlias,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: entry.value.isPrimary
+                                      ? Border.all(
+                                          color: CupertinoColors.activeBlue,
+                                          width: 2,
+                                        )
+                                      : null,
+                                ),
+                                child: CrossPlatformImage(
+                                  path: entry.value.localPath,
+                                  width: 90,
+                                  height: 90,
+                                ),
+                              ),
+                              if (entry.value.isPrimary)
+                                const Positioned(
+                                  bottom: 3,
+                                  left: 3,
+                                  child: Icon(
+                                    CupertinoIcons.star_fill,
+                                    size: 14,
+                                    color: CupertinoColors.systemYellow,
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ),
@@ -498,7 +654,10 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                                   if (item.isBestSeller)
                                     const Padding(
                                       padding: EdgeInsets.only(right: 4),
-                                      child: Text('🔥', style: TextStyle(fontSize: 12)),
+                                      child: Text(
+                                        '🔥',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
                                     ),
                                   Expanded(
                                     child: Text(
@@ -569,7 +728,17 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                           ),
                         ),
                       ),
+                  const SizedBox(height: 16),
                 ],
+                CommentSection(placeId: widget.placeId),
+                const SizedBox(height: 16),
+                Text(
+                  'Cập nhật lần cuối: ${_formatDate(place.updatedAt)}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: CupertinoColors.tertiaryLabel,
+                  ),
+                ),
               ],
             ),
             Positioned(

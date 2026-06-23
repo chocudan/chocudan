@@ -597,6 +597,12 @@ class $PlacesTable extends Places with TableInfo<$PlacesTable, Place> {
   late final GeneratedColumn<String> category = GeneratedColumn<String>(
       'category', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _avgPriceRangeMeta =
+      const VerificationMeta('avgPriceRange');
+  @override
+  late final GeneratedColumn<String> avgPriceRange = GeneratedColumn<String>(
+      'avg_price_range', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _noteMeta = const VerificationMeta('note');
   @override
   late final GeneratedColumn<String> note = GeneratedColumn<String>(
@@ -608,6 +614,14 @@ class $PlacesTable extends Places with TableInfo<$PlacesTable, Place> {
   late final GeneratedColumn<String> createdBy = GeneratedColumn<String>(
       'created_by', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _viewCountMeta =
+      const VerificationMeta('viewCount');
+  @override
+  late final GeneratedColumn<int> viewCount = GeneratedColumn<int>(
+      'view_count', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -637,8 +651,10 @@ class $PlacesTable extends Places with TableInfo<$PlacesTable, Place> {
         freeshipNote,
         openHours,
         category,
+        avgPriceRange,
         note,
         createdBy,
+        viewCount,
         createdAt,
         updatedAt
       ];
@@ -701,6 +717,12 @@ class $PlacesTable extends Places with TableInfo<$PlacesTable, Place> {
       context.handle(_categoryMeta,
           category.isAcceptableOrUnknown(data['category']!, _categoryMeta));
     }
+    if (data.containsKey('avg_price_range')) {
+      context.handle(
+          _avgPriceRangeMeta,
+          avgPriceRange.isAcceptableOrUnknown(
+              data['avg_price_range']!, _avgPriceRangeMeta));
+    }
     if (data.containsKey('note')) {
       context.handle(
           _noteMeta, note.isAcceptableOrUnknown(data['note']!, _noteMeta));
@@ -708,6 +730,10 @@ class $PlacesTable extends Places with TableInfo<$PlacesTable, Place> {
     if (data.containsKey('created_by')) {
       context.handle(_createdByMeta,
           createdBy.isAcceptableOrUnknown(data['created_by']!, _createdByMeta));
+    }
+    if (data.containsKey('view_count')) {
+      context.handle(_viewCountMeta,
+          viewCount.isAcceptableOrUnknown(data['view_count']!, _viewCountMeta));
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
@@ -748,10 +774,14 @@ class $PlacesTable extends Places with TableInfo<$PlacesTable, Place> {
           .read(DriftSqlType.string, data['${effectivePrefix}open_hours']),
       category: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}category']),
+      avgPriceRange: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}avg_price_range']),
       note: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}note']),
       createdBy: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}created_by']),
+      viewCount: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}view_count'])!,
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -777,8 +807,10 @@ class Place extends DataClass implements Insertable<Place> {
   final String? freeshipNote;
   final String? openHours;
   final String? category;
+  final String? avgPriceRange;
   final String? note;
   final String? createdBy;
+  final int viewCount;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Place(
@@ -793,8 +825,10 @@ class Place extends DataClass implements Insertable<Place> {
       this.freeshipNote,
       this.openHours,
       this.category,
+      this.avgPriceRange,
       this.note,
       this.createdBy,
+      required this.viewCount,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -823,12 +857,16 @@ class Place extends DataClass implements Insertable<Place> {
     if (!nullToAbsent || category != null) {
       map['category'] = Variable<String>(category);
     }
+    if (!nullToAbsent || avgPriceRange != null) {
+      map['avg_price_range'] = Variable<String>(avgPriceRange);
+    }
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
     }
     if (!nullToAbsent || createdBy != null) {
       map['created_by'] = Variable<String>(createdBy);
     }
+    map['view_count'] = Variable<int>(viewCount);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -857,10 +895,14 @@ class Place extends DataClass implements Insertable<Place> {
       category: category == null && nullToAbsent
           ? const Value.absent()
           : Value(category),
+      avgPriceRange: avgPriceRange == null && nullToAbsent
+          ? const Value.absent()
+          : Value(avgPriceRange),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       createdBy: createdBy == null && nullToAbsent
           ? const Value.absent()
           : Value(createdBy),
+      viewCount: Value(viewCount),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -881,8 +923,10 @@ class Place extends DataClass implements Insertable<Place> {
       freeshipNote: serializer.fromJson<String?>(json['freeshipNote']),
       openHours: serializer.fromJson<String?>(json['openHours']),
       category: serializer.fromJson<String?>(json['category']),
+      avgPriceRange: serializer.fromJson<String?>(json['avgPriceRange']),
       note: serializer.fromJson<String?>(json['note']),
       createdBy: serializer.fromJson<String?>(json['createdBy']),
+      viewCount: serializer.fromJson<int>(json['viewCount']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -902,8 +946,10 @@ class Place extends DataClass implements Insertable<Place> {
       'freeshipNote': serializer.toJson<String?>(freeshipNote),
       'openHours': serializer.toJson<String?>(openHours),
       'category': serializer.toJson<String?>(category),
+      'avgPriceRange': serializer.toJson<String?>(avgPriceRange),
       'note': serializer.toJson<String?>(note),
       'createdBy': serializer.toJson<String?>(createdBy),
+      'viewCount': serializer.toJson<int>(viewCount),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -921,8 +967,10 @@ class Place extends DataClass implements Insertable<Place> {
           Value<String?> freeshipNote = const Value.absent(),
           Value<String?> openHours = const Value.absent(),
           Value<String?> category = const Value.absent(),
+          Value<String?> avgPriceRange = const Value.absent(),
           Value<String?> note = const Value.absent(),
           Value<String?> createdBy = const Value.absent(),
+          int? viewCount,
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       Place(
@@ -938,8 +986,11 @@ class Place extends DataClass implements Insertable<Place> {
             freeshipNote.present ? freeshipNote.value : this.freeshipNote,
         openHours: openHours.present ? openHours.value : this.openHours,
         category: category.present ? category.value : this.category,
+        avgPriceRange:
+            avgPriceRange.present ? avgPriceRange.value : this.avgPriceRange,
         note: note.present ? note.value : this.note,
         createdBy: createdBy.present ? createdBy.value : this.createdBy,
+        viewCount: viewCount ?? this.viewCount,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -958,8 +1009,12 @@ class Place extends DataClass implements Insertable<Place> {
           : this.freeshipNote,
       openHours: data.openHours.present ? data.openHours.value : this.openHours,
       category: data.category.present ? data.category.value : this.category,
+      avgPriceRange: data.avgPriceRange.present
+          ? data.avgPriceRange.value
+          : this.avgPriceRange,
       note: data.note.present ? data.note.value : this.note,
       createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
+      viewCount: data.viewCount.present ? data.viewCount.value : this.viewCount,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -979,8 +1034,10 @@ class Place extends DataClass implements Insertable<Place> {
           ..write('freeshipNote: $freeshipNote, ')
           ..write('openHours: $openHours, ')
           ..write('category: $category, ')
+          ..write('avgPriceRange: $avgPriceRange, ')
           ..write('note: $note, ')
           ..write('createdBy: $createdBy, ')
+          ..write('viewCount: $viewCount, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -1000,8 +1057,10 @@ class Place extends DataClass implements Insertable<Place> {
       freeshipNote,
       openHours,
       category,
+      avgPriceRange,
       note,
       createdBy,
+      viewCount,
       createdAt,
       updatedAt);
   @override
@@ -1019,8 +1078,10 @@ class Place extends DataClass implements Insertable<Place> {
           other.freeshipNote == this.freeshipNote &&
           other.openHours == this.openHours &&
           other.category == this.category &&
+          other.avgPriceRange == this.avgPriceRange &&
           other.note == this.note &&
           other.createdBy == this.createdBy &&
+          other.viewCount == this.viewCount &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -1037,8 +1098,10 @@ class PlacesCompanion extends UpdateCompanion<Place> {
   final Value<String?> freeshipNote;
   final Value<String?> openHours;
   final Value<String?> category;
+  final Value<String?> avgPriceRange;
   final Value<String?> note;
   final Value<String?> createdBy;
+  final Value<int> viewCount;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -1054,8 +1117,10 @@ class PlacesCompanion extends UpdateCompanion<Place> {
     this.freeshipNote = const Value.absent(),
     this.openHours = const Value.absent(),
     this.category = const Value.absent(),
+    this.avgPriceRange = const Value.absent(),
     this.note = const Value.absent(),
     this.createdBy = const Value.absent(),
+    this.viewCount = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1072,8 +1137,10 @@ class PlacesCompanion extends UpdateCompanion<Place> {
     this.freeshipNote = const Value.absent(),
     this.openHours = const Value.absent(),
     this.category = const Value.absent(),
+    this.avgPriceRange = const Value.absent(),
     this.note = const Value.absent(),
     this.createdBy = const Value.absent(),
+    this.viewCount = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1091,8 +1158,10 @@ class PlacesCompanion extends UpdateCompanion<Place> {
     Expression<String>? freeshipNote,
     Expression<String>? openHours,
     Expression<String>? category,
+    Expression<String>? avgPriceRange,
     Expression<String>? note,
     Expression<String>? createdBy,
+    Expression<int>? viewCount,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -1109,8 +1178,10 @@ class PlacesCompanion extends UpdateCompanion<Place> {
       if (freeshipNote != null) 'freeship_note': freeshipNote,
       if (openHours != null) 'open_hours': openHours,
       if (category != null) 'category': category,
+      if (avgPriceRange != null) 'avg_price_range': avgPriceRange,
       if (note != null) 'note': note,
       if (createdBy != null) 'created_by': createdBy,
+      if (viewCount != null) 'view_count': viewCount,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -1129,8 +1200,10 @@ class PlacesCompanion extends UpdateCompanion<Place> {
       Value<String?>? freeshipNote,
       Value<String?>? openHours,
       Value<String?>? category,
+      Value<String?>? avgPriceRange,
       Value<String?>? note,
       Value<String?>? createdBy,
+      Value<int>? viewCount,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
       Value<int>? rowid}) {
@@ -1146,8 +1219,10 @@ class PlacesCompanion extends UpdateCompanion<Place> {
       freeshipNote: freeshipNote ?? this.freeshipNote,
       openHours: openHours ?? this.openHours,
       category: category ?? this.category,
+      avgPriceRange: avgPriceRange ?? this.avgPriceRange,
       note: note ?? this.note,
       createdBy: createdBy ?? this.createdBy,
+      viewCount: viewCount ?? this.viewCount,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -1190,11 +1265,17 @@ class PlacesCompanion extends UpdateCompanion<Place> {
     if (category.present) {
       map['category'] = Variable<String>(category.value);
     }
+    if (avgPriceRange.present) {
+      map['avg_price_range'] = Variable<String>(avgPriceRange.value);
+    }
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
     if (createdBy.present) {
       map['created_by'] = Variable<String>(createdBy.value);
+    }
+    if (viewCount.present) {
+      map['view_count'] = Variable<int>(viewCount.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -1222,8 +1303,10 @@ class PlacesCompanion extends UpdateCompanion<Place> {
           ..write('freeshipNote: $freeshipNote, ')
           ..write('openHours: $openHours, ')
           ..write('category: $category, ')
+          ..write('avgPriceRange: $avgPriceRange, ')
           ..write('note: $note, ')
           ..write('createdBy: $createdBy, ')
+          ..write('viewCount: $viewCount, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -2274,6 +2357,354 @@ class PlaceImagesCompanion extends UpdateCompanion<PlaceImage> {
   }
 }
 
+class $CommentsTable extends Comments with TableInfo<$CommentsTable, Comment> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CommentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _placeIdMeta =
+      const VerificationMeta('placeId');
+  @override
+  late final GeneratedColumn<String> placeId = GeneratedColumn<String>(
+      'place_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+      'user_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _contentMeta =
+      const VerificationMeta('content');
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+      'content', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _isApprovedMeta =
+      const VerificationMeta('isApproved');
+  @override
+  late final GeneratedColumn<bool> isApproved = GeneratedColumn<bool>(
+      'is_approved', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_approved" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, placeId, userId, content, isApproved, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'comments';
+  @override
+  VerificationContext validateIntegrity(Insertable<Comment> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('place_id')) {
+      context.handle(_placeIdMeta,
+          placeId.isAcceptableOrUnknown(data['place_id']!, _placeIdMeta));
+    } else if (isInserting) {
+      context.missing(_placeIdMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(_userIdMeta,
+          userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta));
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(_contentMeta,
+          content.isAcceptableOrUnknown(data['content']!, _contentMeta));
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('is_approved')) {
+      context.handle(
+          _isApprovedMeta,
+          isApproved.isAcceptableOrUnknown(
+              data['is_approved']!, _isApprovedMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Comment map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Comment(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      placeId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}place_id'])!,
+      userId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}user_id'])!,
+      content: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}content'])!,
+      isApproved: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_approved'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $CommentsTable createAlias(String alias) {
+    return $CommentsTable(attachedDatabase, alias);
+  }
+}
+
+class Comment extends DataClass implements Insertable<Comment> {
+  final String id;
+  final String placeId;
+  final String userId;
+  final String content;
+  final bool isApproved;
+  final DateTime createdAt;
+  const Comment(
+      {required this.id,
+      required this.placeId,
+      required this.userId,
+      required this.content,
+      required this.isApproved,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['place_id'] = Variable<String>(placeId);
+    map['user_id'] = Variable<String>(userId);
+    map['content'] = Variable<String>(content);
+    map['is_approved'] = Variable<bool>(isApproved);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CommentsCompanion toCompanion(bool nullToAbsent) {
+    return CommentsCompanion(
+      id: Value(id),
+      placeId: Value(placeId),
+      userId: Value(userId),
+      content: Value(content),
+      isApproved: Value(isApproved),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory Comment.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Comment(
+      id: serializer.fromJson<String>(json['id']),
+      placeId: serializer.fromJson<String>(json['placeId']),
+      userId: serializer.fromJson<String>(json['userId']),
+      content: serializer.fromJson<String>(json['content']),
+      isApproved: serializer.fromJson<bool>(json['isApproved']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'placeId': serializer.toJson<String>(placeId),
+      'userId': serializer.toJson<String>(userId),
+      'content': serializer.toJson<String>(content),
+      'isApproved': serializer.toJson<bool>(isApproved),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  Comment copyWith(
+          {String? id,
+          String? placeId,
+          String? userId,
+          String? content,
+          bool? isApproved,
+          DateTime? createdAt}) =>
+      Comment(
+        id: id ?? this.id,
+        placeId: placeId ?? this.placeId,
+        userId: userId ?? this.userId,
+        content: content ?? this.content,
+        isApproved: isApproved ?? this.isApproved,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  Comment copyWithCompanion(CommentsCompanion data) {
+    return Comment(
+      id: data.id.present ? data.id.value : this.id,
+      placeId: data.placeId.present ? data.placeId.value : this.placeId,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      content: data.content.present ? data.content.value : this.content,
+      isApproved:
+          data.isApproved.present ? data.isApproved.value : this.isApproved,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Comment(')
+          ..write('id: $id, ')
+          ..write('placeId: $placeId, ')
+          ..write('userId: $userId, ')
+          ..write('content: $content, ')
+          ..write('isApproved: $isApproved, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, placeId, userId, content, isApproved, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Comment &&
+          other.id == this.id &&
+          other.placeId == this.placeId &&
+          other.userId == this.userId &&
+          other.content == this.content &&
+          other.isApproved == this.isApproved &&
+          other.createdAt == this.createdAt);
+}
+
+class CommentsCompanion extends UpdateCompanion<Comment> {
+  final Value<String> id;
+  final Value<String> placeId;
+  final Value<String> userId;
+  final Value<String> content;
+  final Value<bool> isApproved;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const CommentsCompanion({
+    this.id = const Value.absent(),
+    this.placeId = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.content = const Value.absent(),
+    this.isApproved = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CommentsCompanion.insert({
+    required String id,
+    required String placeId,
+    required String userId,
+    required String content,
+    this.isApproved = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        placeId = Value(placeId),
+        userId = Value(userId),
+        content = Value(content);
+  static Insertable<Comment> custom({
+    Expression<String>? id,
+    Expression<String>? placeId,
+    Expression<String>? userId,
+    Expression<String>? content,
+    Expression<bool>? isApproved,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (placeId != null) 'place_id': placeId,
+      if (userId != null) 'user_id': userId,
+      if (content != null) 'content': content,
+      if (isApproved != null) 'is_approved': isApproved,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CommentsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? placeId,
+      Value<String>? userId,
+      Value<String>? content,
+      Value<bool>? isApproved,
+      Value<DateTime>? createdAt,
+      Value<int>? rowid}) {
+    return CommentsCompanion(
+      id: id ?? this.id,
+      placeId: placeId ?? this.placeId,
+      userId: userId ?? this.userId,
+      content: content ?? this.content,
+      isApproved: isApproved ?? this.isApproved,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (placeId.present) {
+      map['place_id'] = Variable<String>(placeId.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (isApproved.present) {
+      map['is_approved'] = Variable<bool>(isApproved.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CommentsCompanion(')
+          ..write('id: $id, ')
+          ..write('placeId: $placeId, ')
+          ..write('userId: $userId, ')
+          ..write('content: $content, ')
+          ..write('isApproved: $isApproved, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2282,12 +2713,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $MenuItemsTable menuItems = $MenuItemsTable(this);
   late final $RatingsTable ratings = $RatingsTable(this);
   late final $PlaceImagesTable placeImages = $PlaceImagesTable(this);
+  late final $CommentsTable comments = $CommentsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities =>
-      [users, places, menuItems, ratings, placeImages];
+      [users, places, menuItems, ratings, placeImages, comments];
 }
 
 typedef $$UsersTableCreateCompanionBuilder = UsersCompanion Function({
@@ -2545,8 +2977,10 @@ typedef $$PlacesTableCreateCompanionBuilder = PlacesCompanion Function({
   Value<String?> freeshipNote,
   Value<String?> openHours,
   Value<String?> category,
+  Value<String?> avgPriceRange,
   Value<String?> note,
   Value<String?> createdBy,
+  Value<int> viewCount,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<int> rowid,
@@ -2563,8 +2997,10 @@ typedef $$PlacesTableUpdateCompanionBuilder = PlacesCompanion Function({
   Value<String?> freeshipNote,
   Value<String?> openHours,
   Value<String?> category,
+  Value<String?> avgPriceRange,
   Value<String?> note,
   Value<String?> createdBy,
+  Value<int> viewCount,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<int> rowid,
@@ -2612,11 +3048,17 @@ class $$PlacesTableFilterComposer
   ColumnFilters<String> get category => $composableBuilder(
       column: $table.category, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get avgPriceRange => $composableBuilder(
+      column: $table.avgPriceRange, builder: (column) => ColumnFilters(column));
+
   ColumnFilters<String> get note => $composableBuilder(
       column: $table.note, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get createdBy => $composableBuilder(
       column: $table.createdBy, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get viewCount => $composableBuilder(
+      column: $table.viewCount, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -2668,11 +3110,18 @@ class $$PlacesTableOrderingComposer
   ColumnOrderings<String> get category => $composableBuilder(
       column: $table.category, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get avgPriceRange => $composableBuilder(
+      column: $table.avgPriceRange,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get note => $composableBuilder(
       column: $table.note, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get createdBy => $composableBuilder(
       column: $table.createdBy, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get viewCount => $composableBuilder(
+      column: $table.viewCount, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
@@ -2723,11 +3172,17 @@ class $$PlacesTableAnnotationComposer
   GeneratedColumn<String> get category =>
       $composableBuilder(column: $table.category, builder: (column) => column);
 
+  GeneratedColumn<String> get avgPriceRange => $composableBuilder(
+      column: $table.avgPriceRange, builder: (column) => column);
+
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
 
   GeneratedColumn<String> get createdBy =>
       $composableBuilder(column: $table.createdBy, builder: (column) => column);
+
+  GeneratedColumn<int> get viewCount =>
+      $composableBuilder(column: $table.viewCount, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -2770,8 +3225,10 @@ class $$PlacesTableTableManager extends RootTableManager<
             Value<String?> freeshipNote = const Value.absent(),
             Value<String?> openHours = const Value.absent(),
             Value<String?> category = const Value.absent(),
+            Value<String?> avgPriceRange = const Value.absent(),
             Value<String?> note = const Value.absent(),
             Value<String?> createdBy = const Value.absent(),
+            Value<int> viewCount = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -2788,8 +3245,10 @@ class $$PlacesTableTableManager extends RootTableManager<
             freeshipNote: freeshipNote,
             openHours: openHours,
             category: category,
+            avgPriceRange: avgPriceRange,
             note: note,
             createdBy: createdBy,
+            viewCount: viewCount,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -2806,8 +3265,10 @@ class $$PlacesTableTableManager extends RootTableManager<
             Value<String?> freeshipNote = const Value.absent(),
             Value<String?> openHours = const Value.absent(),
             Value<String?> category = const Value.absent(),
+            Value<String?> avgPriceRange = const Value.absent(),
             Value<String?> note = const Value.absent(),
             Value<String?> createdBy = const Value.absent(),
+            Value<int> viewCount = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -2824,8 +3285,10 @@ class $$PlacesTableTableManager extends RootTableManager<
             freeshipNote: freeshipNote,
             openHours: openHours,
             category: category,
+            avgPriceRange: avgPriceRange,
             note: note,
             createdBy: createdBy,
+            viewCount: viewCount,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -3393,6 +3856,186 @@ typedef $$PlaceImagesTableProcessedTableManager = ProcessedTableManager<
     (PlaceImage, BaseReferences<_$AppDatabase, $PlaceImagesTable, PlaceImage>),
     PlaceImage,
     PrefetchHooks Function()>;
+typedef $$CommentsTableCreateCompanionBuilder = CommentsCompanion Function({
+  required String id,
+  required String placeId,
+  required String userId,
+  required String content,
+  Value<bool> isApproved,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+typedef $$CommentsTableUpdateCompanionBuilder = CommentsCompanion Function({
+  Value<String> id,
+  Value<String> placeId,
+  Value<String> userId,
+  Value<String> content,
+  Value<bool> isApproved,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+
+class $$CommentsTableFilterComposer
+    extends Composer<_$AppDatabase, $CommentsTable> {
+  $$CommentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get placeId => $composableBuilder(
+      column: $table.placeId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get userId => $composableBuilder(
+      column: $table.userId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get content => $composableBuilder(
+      column: $table.content, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isApproved => $composableBuilder(
+      column: $table.isApproved, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$CommentsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CommentsTable> {
+  $$CommentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get placeId => $composableBuilder(
+      column: $table.placeId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+      column: $table.userId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get content => $composableBuilder(
+      column: $table.content, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isApproved => $composableBuilder(
+      column: $table.isApproved, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$CommentsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CommentsTable> {
+  $$CommentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get placeId =>
+      $composableBuilder(column: $table.placeId, builder: (column) => column);
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<bool> get isApproved => $composableBuilder(
+      column: $table.isApproved, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$CommentsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $CommentsTable,
+    Comment,
+    $$CommentsTableFilterComposer,
+    $$CommentsTableOrderingComposer,
+    $$CommentsTableAnnotationComposer,
+    $$CommentsTableCreateCompanionBuilder,
+    $$CommentsTableUpdateCompanionBuilder,
+    (Comment, BaseReferences<_$AppDatabase, $CommentsTable, Comment>),
+    Comment,
+    PrefetchHooks Function()> {
+  $$CommentsTableTableManager(_$AppDatabase db, $CommentsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CommentsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CommentsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CommentsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> placeId = const Value.absent(),
+            Value<String> userId = const Value.absent(),
+            Value<String> content = const Value.absent(),
+            Value<bool> isApproved = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              CommentsCompanion(
+            id: id,
+            placeId: placeId,
+            userId: userId,
+            content: content,
+            isApproved: isApproved,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String placeId,
+            required String userId,
+            required String content,
+            Value<bool> isApproved = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              CommentsCompanion.insert(
+            id: id,
+            placeId: placeId,
+            userId: userId,
+            content: content,
+            isApproved: isApproved,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$CommentsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $CommentsTable,
+    Comment,
+    $$CommentsTableFilterComposer,
+    $$CommentsTableOrderingComposer,
+    $$CommentsTableAnnotationComposer,
+    $$CommentsTableCreateCompanionBuilder,
+    $$CommentsTableUpdateCompanionBuilder,
+    (Comment, BaseReferences<_$AppDatabase, $CommentsTable, Comment>),
+    Comment,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3407,4 +4050,6 @@ class $AppDatabaseManager {
       $$RatingsTableTableManager(_db, _db.ratings);
   $$PlaceImagesTableTableManager get placeImages =>
       $$PlaceImagesTableTableManager(_db, _db.placeImages);
+  $$CommentsTableTableManager get comments =>
+      $$CommentsTableTableManager(_db, _db.comments);
 }

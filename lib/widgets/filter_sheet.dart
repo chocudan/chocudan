@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 
-enum SortOption { ratingDesc, newest, priceAsc }
+enum SortOption { ratingDesc, newest, priceAsc, viewsDesc }
 
 class FeedFilters {
   final Set<String> categories;
@@ -204,6 +204,11 @@ class _FilterSheetContentState extends State<_FilterSheetContent> {
               label: 'Giá thấp đến cao',
               selected: _sort == SortOption.priceAsc,
               onTap: () => setState(() => _sort = SortOption.priceAsc),
+            ),
+            _SortRadioRow(
+              label: 'Xem nhiều nhất',
+              selected: _sort == SortOption.viewsDesc,
+              onTap: () => setState(() => _sort = SortOption.viewsDesc),
             ),
             const SizedBox(height: 16),
             Row(

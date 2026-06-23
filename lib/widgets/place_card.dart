@@ -1,9 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import '../db/database.dart';
+import 'cross_platform_image.dart';
+import 'open_status_badge.dart';
 
 class PlaceCard extends StatelessWidget {
   final Place place;
   final List<MenuItem> menuItems;
+  final PlaceImage? primaryImage;
   final double? avgRating;
   final VoidCallback onTap;
 
@@ -11,13 +14,13 @@ class PlaceCard extends StatelessWidget {
     super.key,
     required this.place,
     required this.menuItems,
+    required this.primaryImage,
     required this.avgRating,
     required this.onTap,
   });
 
   String _priceRangeText() {
     if (menuItems.isEmpty) return '';
-    // Cố gắng tìm số nhỏ nhất/lớn nhất từ priceText (vd "22k", "12k-15k")
     final prices = <double>[];
     final regex = RegExp(r'(\d+(?:\.\d+)?)\s*k');
     for (final item in menuItems) {
@@ -42,165 +45,197 @@ class PlaceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bestSellers =
         menuItems.where((m) => m.isBestSeller).map((m) => m.name).toList();
-    final highlightNames = (bestSellers.isNotEmpty
+    final previewItems = (bestSellers.isNotEmpty
             ? bestSellers
             : menuItems.map((m) => m.name).toList())
-        .take(2)
-        .join(' · ');
-    final priceRange = _priceRangeText();
+        .take(3)
+        .toList();
+    final priceRange = place.avgPriceRange ?? _priceRangeText();
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: CupertinoColors.white,
           borderRadius: BorderRadius.circular(14),
         ),
+        clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
+            if (primaryImage != null)
+              SizedBox(
+                height: 140,
+                width: double.infinity,
+                child: CrossPlatformImage(
+                  path: primaryImage!.localPath,
+                  width: double.infinity,
+                  height: 140,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        place.name,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              place.name,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            if (place.address != null)
+                              Text(
+                                place.address!,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: CupertinoColors.secondaryLabel,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              )
+                            else if (place.phone != null)
+                              Text(
+                                place.phone!,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: CupertinoColors.secondaryLabel,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      if (place.address != null)
-                        Text(
-                          place.address!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: CupertinoColors.secondaryLabel,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      else if (place.phone != null)
-                        Text(
-                          place.phone!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: CupertinoColors.secondaryLabel,
-                          ),
+                      if (place.freeship)
+                        _Badge(
+                          text: 'Freeship',
+                          bg: CupertinoColors.systemGreen.withOpacity(0.15),
+                          fg: CupertinoColors.activeGreen,
                         ),
                     ],
                   ),
-                ),
-                if (place.freeship)
-                  _Badge(
-                    text: 'Freeship',
-                    bg: CupertinoColors.systemGreen.withOpacity(0.15),
-                    fg: CupertinoColors.activeGreen,
-                  ),
-              ],
-            ),
-            if (priceRange.isNotEmpty || menuItems.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  if (priceRange.isNotEmpty)
-                    Text(
-                      priceRange,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  if (menuItems.isNotEmpty)
-                    Text(
-                      ' · ${menuItems.length} món',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: CupertinoColors.secondaryLabel,
-                      ),
-                    ),
-                ],
-              ),
-            ],
-            if (highlightNames.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: CupertinoColors.systemGrey6,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '🔥 $highlightNames',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: CupertinoColors.label,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-            const SizedBox(height: 8),
-            Container(
-              decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: CupertinoColors.systemGrey5,
-                    width: 0.5,
-                  ),
-                ),
-              ),
-              padding: const EdgeInsets.only(top: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (place.openHours != null)
-                    Text(
-                      '🕐 ${place.openHours}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: CupertinoColors.secondaryLabel,
-                      ),
-                    )
-                  else
-                    const SizedBox(),
-                  if (avgRating != null)
+                  if (priceRange.isNotEmpty || menuItems.isNotEmpty) ...[
+                    const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(
-                          CupertinoIcons.star_fill,
-                          size: 13,
-                          color: CupertinoColors.systemYellow,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          avgRating!.toStringAsFixed(1),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                        if (priceRange.isNotEmpty)
+                          Text(
+                            priceRange,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
+                        if (menuItems.isNotEmpty)
+                          Text(
+                            ' · ${menuItems.length} món',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: CupertinoColors.secondaryLabel,
+                            ),
+                          ),
                       ],
-                    )
-                  else
-                    const Text(
-                      'Chưa rate',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: CupertinoColors.tertiaryLabel,
+                    ),
+                  ],
+                  if (previewItems.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: previewItems
+                          .map(
+                            (name) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: CupertinoColors.systemGrey6,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                bestSellers.contains(name)
+                                    ? '🔥 $name'
+                                    : name,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: CupertinoColors.label,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        top: BorderSide(
+                          color: CupertinoColors.systemGrey5,
+                          width: 0.5,
+                        ),
                       ),
                     ),
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        if (place.openHours != null)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '🕐 ${place.openHours}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: CupertinoColors.secondaryLabel,
+                                ),
+                              ),
+                              OpenStatusBadge(openHours: place.openHours),
+                            ],
+                          )
+                        else
+                          const SizedBox(),
+                        if (avgRating != null)
+                          Row(
+                            children: [
+                              const Icon(
+                                CupertinoIcons.star_fill,
+                                size: 13,
+                                color: CupertinoColors.systemYellow,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                avgRating!.toStringAsFixed(1),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          const Text(
+                            'Chưa rate',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: CupertinoColors.tertiaryLabel,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),

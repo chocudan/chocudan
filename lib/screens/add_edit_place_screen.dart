@@ -6,6 +6,8 @@ import '../db/id_helper.dart';
 import '../providers/app_providers.dart';
 import '../services/ai_parse_service.dart';
 import '../widgets/cupertino_form_row.dart' show AppFormRow;
+import '../widgets/tag_input.dart';
+import '../widgets/multi_image_picker.dart';
 
 class AddEditPlaceScreen extends ConsumerStatefulWidget {
   final String type; // "food" | "destination"
@@ -30,15 +32,16 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
   final _openHoursController = TextEditingController();
-  final _categoryController = TextEditingController();
+  final _avgPriceController = TextEditingController();
   final _freeshipNoteController = TextEditingController();
   final _noteController = TextEditingController();
 
+  List<String> _categoryTags = [];
+  List<DraftImage> _draftImages = [];
   bool _freeship = false;
   bool _aiLoading = false;
   String? _error;
 
-  // Danh sách món đang chỉnh sửa: mỗi item là map name/price/categoryGroup
   final List<_MenuItemDraft> _menuDrafts = [];
 
   bool get _isEditMode => widget.existingPlace != null;
@@ -53,17 +56,23 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
       _phoneController.text = p.phone ?? '';
       _addressController.text = p.address ?? '';
       _openHoursController.text = p.openHours ?? '';
-      _categoryController.text = p.category ?? '';
+      _avgPriceController.text = p.avgPriceRange ?? '';
+      _categoryTags = (p.category ?? '')
+          .split(',')
+          .map((t) => t.trim())
+          .where((t) => t.isNotEmpty)
+          .toList();
       _freeshipNoteController.text = p.freeshipNote ?? '';
       _noteController.text = p.note ?? '';
       _freeship = p.freeship;
-      _loadExistingMenu();
+      _loadExistingData();
     }
   }
 
-  Future<void> _loadExistingMenu() async {
+  Future<void> _loadExistingData() async {
     final db = ref.read(databaseProvider);
     final items = await db.getMenuItemsForPlace(widget.existingPlace!.id);
+    final images = await db.getImagesForPlace(widget.existingPlace!.id);
     setState(() {
       _menuDrafts.addAll(
         items.map(
@@ -76,6 +85,12 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
           ),
         ),
       );
+      _draftImages = images
+          .map((img) => DraftImage(
+                localPath: img.localPath,
+                isPrimary: img.isPrimary,
+              ))
+          .toList();
     });
   }
 
@@ -86,7 +101,7 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
     _phoneController.dispose();
     _addressController.dispose();
     _openHoursController.dispose();
-    _categoryController.dispose();
+    _avgPriceController.dispose();
     _freeshipNoteController.dispose();
     _noteController.dispose();
     super.dispose();
@@ -111,7 +126,13 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
         _phoneController.text = result.phone ?? '';
         _addressController.text = result.address ?? '';
         _openHoursController.text = result.openHours ?? '';
-        _categoryController.text = result.category ?? '';
+        _categoryTags = result.category == null
+            ? []
+            : result.category!
+                .split(',')
+                .map((t) => t.trim())
+                .where((t) => t.isNotEmpty)
+                .toList();
         _freeshipNoteController.text = result.freeshipNote ?? '';
         _freeship = result.freeship;
         _menuDrafts
@@ -180,9 +201,10 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
       openHours: Value(_openHoursController.text.trim().isEmpty
           ? null
           : _openHoursController.text.trim()),
-      category: Value(_categoryController.text.trim().isEmpty
+      category: Value(_categoryTags.isEmpty ? null : _categoryTags.join(',')),
+      avgPriceRange: Value(_avgPriceController.text.trim().isEmpty
           ? null
-          : _categoryController.text.trim()),
+          : _avgPriceController.text.trim()),
       note: Value(_noteController.text.trim().isEmpty
           ? null
           : _noteController.text.trim()),
@@ -210,6 +232,26 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
             draft.categoryGroup.trim().isEmpty ? null : draft.categoryGroup,
           ),
           isBestSeller: Value(draft.isBestSeller),
+        ),
+      );
+    }
+
+    // Đồng bộ ảnh: xoá hết ảnh cũ trong DB rồi ghi lại theo draft hiện tại
+    // (đơn giản hơn so với diff từng ảnh, chấp nhận được vì số ảnh/quán
+    // thường không quá nhiều).
+    if (_isEditMode) {
+      final oldImages = await db.getImagesForPlace(placeId);
+      for (final img in oldImages) {
+        await db.deletePlaceImage(img.id);
+      }
+    }
+    for (final draft in _draftImages) {
+      await db.insertPlaceImage(
+        PlaceImagesCompanion.insert(
+          id: newId(),
+          placeId: placeId,
+          localPath: draft.localPath,
+          isPrimary: Value(draft.isPrimary),
         ),
       );
     }
@@ -248,11 +290,13 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
                   children: const {
                     0: Padding(
                       padding: EdgeInsets.symmetric(vertical: 6),
-                      child: Text('✨ Dán từ FB', style: TextStyle(fontSize: 13)),
+                      child:
+                          Text('✨ Dán từ FB', style: TextStyle(fontSize: 13)),
                     ),
                     1: Padding(
                       padding: EdgeInsets.symmetric(vertical: 6),
-                      child: Text('⌨ Nhập tay', style: TextStyle(fontSize: 13)),
+                      child:
+                          Text('⌨ Nhập tay', style: TextStyle(fontSize: 13)),
                     ),
                   },
                   onValueChanged: (v) {
@@ -303,6 +347,19 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
                   ],
                   if (_segment == 1 || _nameController.text.isNotEmpty) ...[
                     const SizedBox(height: 14),
+                    const _SectionHeader('Hình ảnh'),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      child: MultiImagePicker(
+                        initialImages: _draftImages,
+                        onChanged: (imgs) => _draftImages = imgs,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                     const _SectionHeader('Thông tin quán'),
                     CupertinoListSection.insetGrouped(
                       margin: EdgeInsets.zero,
@@ -329,9 +386,9 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
                           placeholder: 'Vd: 8:00 - 22:00',
                         ),
                         AppFormRow(
-                          label: 'Danh mục',
-                          controller: _categoryController,
-                          placeholder: 'Vd: Ăn uống, Bánh...',
+                          label: 'Giá trung bình',
+                          controller: _avgPriceController,
+                          placeholder: 'Vd: 20k - 50k',
                         ),
                         AppFormRow(
                           label: 'Freeship',
@@ -352,6 +409,20 @@ class _AddEditPlaceScreenState extends ConsumerState<AddEditPlaceScreen> {
                           placeholder: 'Tuỳ chọn',
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 14),
+                    const _SectionHeader('Danh mục'),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.all(10),
+                      child: TagInput(
+                        initialTags: _categoryTags,
+                        onChanged: (tags) => _categoryTags = tags,
+                        placeholder: 'Vd: Ăn uống, Bánh, Đồ uống...',
+                      ),
                     ),
                     const SizedBox(height: 14),
                     const _SectionHeader('Món ăn'),

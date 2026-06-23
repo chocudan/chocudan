@@ -1,0 +1,70 @@
+{
+  "_comment": "File mẫu để import danh sách quán vào app Chợ Cư Dân. Mảng 'places' chứa các quán — nếu 'id' đã tồn tại trong database, dữ liệu sẽ bị ĐÈ (upsert); nếu 'id' để trống hoặc null, app tự sinh UUID mới khi import.",
+
+  "places": [
+    {
+      "id": null,
+      "type": "food",
+      "name": "Thiết Foods",
+      "phone": "0965805358",
+      "phone2": null,
+      "address": "593A Nguyễn Xiển (đối diện cổng Vin)",
+      "freeship": true,
+      "freeshipNote": "Freeship đơn từ 50k, dưới 50k quán phụ thu ship 5k",
+      "openHours": "8:30 - 22:30",
+      "category": "Ăn uống,Đồ uống",
+      "avgPriceRange": "10k - 32k",
+      "note": null,
+      "rawText": "SIÊU HẤP DẪN TRÁI CÂY TƯƠI MỖI NGÀY...",
+      "menuItems": [
+        {
+          "name": "Rau má / rau má đậu xanh sữa",
+          "priceText": "22k",
+          "categoryGroup": "Đồ uống",
+          "isBestSeller": false
+        },
+        {
+          "name": "Cà phê",
+          "priceText": "12k - 15k",
+          "categoryGroup": "Đồ uống",
+          "isBestSeller": false
+        },
+        {
+          "name": "Latte matcha/khoai môn/cacao",
+          "priceText": "28k - 32k",
+          "categoryGroup": "Đồ uống",
+          "isBestSeller": true
+        }
+      ]
+    },
+    {
+      "id": null,
+      "type": "food",
+      "name": "Tiệm Bánh Minh Anh",
+      "phone": "0886933378",
+      "phone2": null,
+      "address": null,
+      "freeship": true,
+      "freeshipNote": "Freeship Vinhome bill từ 40k, dưới 40k +5k ship",
+      "openHours": null,
+      "category": "Bánh",
+      "avgPriceRange": "30k - 55k",
+      "note": "Bánh sinh nhật cần đặt trước 1 tiếng",
+      "rawText": "Thả chiếc menu ở đây cho mọi người lựa món...",
+      "menuItems": [
+        {
+          "name": "Bánh mì muối ớt sốt bơ",
+          "priceText": "30k/hộp",
+          "categoryGroup": null,
+          "isBestSeller": true
+        },
+        {
+          "name": "Bông lan trứng muối sốt phô mai",
+          "priceText": "45k/hộp",
+          "categoryGroup": null,
+          "isBestSeller": false
+        }
+      ]
+    }
+  ]
+}
